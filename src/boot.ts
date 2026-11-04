@@ -21,13 +21,27 @@ function setFailed(message: string): void {
   if (startLabel) startLabel.textContent = message;
 }
 
+// 出问题时把信息显示在启动页上，不要留一个黑屏让玩家猜
+window.addEventListener('error', (event) => {
+  console.error('[boot] 运行时错误', event.error ?? event.message);
+  if (startScreen && !startScreen.classList.contains('hidden')) {
+    setFailed('游戏出错了，刷新试试');
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  console.error('[boot] 未处理的 Promise 错误', event.reason);
+  if (startScreen && !startScreen.classList.contains('hidden')) {
+    setFailed('加载失败，刷新试试');
+  }
+});
+
 async function start(): Promise<void> {
   setLoading();
 
-  // 等两帧，确保 #game 已经完成布局，否则 Phaser 会按错误尺寸创建画布
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-  });
+  // 用 setTimeout 而不是 requestAnimationFrame：
+  // rAF 在后台标签页 / iframe 里可能不触发，await 会永远卡住导致游戏起不来。
+  await new Promise<void>((resolve) => window.setTimeout(resolve, 60));
 
   try {
     // 动态导入：游戏代码和资源到这一刻才真正下载

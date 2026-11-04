@@ -33,9 +33,15 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const game = new Phaser.Game(config);
 
-// 首帧时 #game 的尺寸可能还没稳定（尤其按需加载时），强制刷新一次缩放
-window.setTimeout(() => game.scale.refresh(), 120);
-window.addEventListener('resize', () => game.scale.refresh());
+// 等游戏真正就绪后再校准一次尺寸，不要在 boot 阶段动它（会导致黑屏/卡死）
+game.events.once(Phaser.Core.Events.READY, () => {
+  game.scale.refresh();
+});
+
+// 窗口尺寸变化时下一帧再刷新，避免和渲染循环打架
+window.addEventListener('resize', () => {
+  window.requestAnimationFrame(() => game.scale.refresh());
+});
 window.addEventListener('orientationchange', () => {
-  window.setTimeout(() => game.scale.refresh(), 150);
+  window.setTimeout(() => game.scale.refresh(), 300);
 });

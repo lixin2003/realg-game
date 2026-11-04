@@ -1158,19 +1158,28 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(151);
-      c.setInteractive(new Phaser.Geom.Circle(r, r, r), Phaser.Geom.Circle.Contains);
+      // 用整体包围盒当点击区，比精确圆形更好按
+      c.setInteractive({ useHandCursor: true });
       return c;
     };
 
     const bind = (target: Phaser.GameObjects.Arc, key: keyof VirtualInput): void => {
-      const set = (value: boolean): void => {
-        this.virtualState[key] = value;
-        this.rabbit.setVirtualInput({ [key]: value } as Partial<VirtualInput>);
+      const press = (): void => {
+        target.setFillStyle(0x2f6b52, 0.72);
+        this.virtualState[key] = true;
+        this.rabbit.setVirtualInput({ [key]: true } as Partial<VirtualInput>);
       };
-      target.on('pointerdown', () => set(true));
-      target.on('pointerup', () => set(false));
-      target.on('pointerout', () => set(false));
-      target.on('pointerupoutside', () => set(false));
+      const release = (): void => {
+        target.setFillStyle(0x08131e, 0.42);
+        if (!this.virtualState[key]) return;
+        this.virtualState[key] = false;
+        this.rabbit.setVirtualInput({ [key]: false } as Partial<VirtualInput>);
+      };
+
+      target.on('pointerdown', press);
+      target.on('pointerup', release);
+      target.on('pointerout', release);
+      target.on('pointerupoutside', release);
     };
 
     // 按钮放大了一圈，方便拇指按
@@ -1178,6 +1187,12 @@ export class GameScene extends Phaser.Scene {
     bind(pad(158, 294, 36, '▶'), 'right');
     bind(pad(562, 272, 42, '跳'), 'jump');
     bind(pad(476, 306, 32, '冲'), 'dash');
+
+    // 任何地方抬手都清空状态，避免手指滑出按钮后一直按住
+    this.input.on('pointerup', () => {
+      this.virtualState = { left: false, right: false, jump: false, dash: false };
+      this.rabbit.setVirtualInput({ left: false, right: false, jump: false, dash: false });
+    });
   }
 
   private finishLevel(cleared: boolean): void {
