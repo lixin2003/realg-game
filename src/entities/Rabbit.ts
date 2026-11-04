@@ -58,7 +58,6 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
   private jumpBufferTimer = 0;
   private dashTimer = 0;
   private dashCooldown = 0;
-  private jumpCutAvailable = false;
   private facing = 1;
 
   private wasOnGround = true;
@@ -135,7 +134,6 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
   private startDash(): void {
     this.dashTimer = TUNING.dashTime;
     this.dashCooldown = TUNING.dashCooldown;
-    this.jumpCutAvailable = false;
     this.playState('dash');
     this.onDash?.();
 
@@ -156,7 +154,6 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
     body.setVelocityY(TUNING.jumpVelocity);
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
-    this.jumpCutAvailable = true;
     this.onJump?.();
 
     if (!this.realArt) {
@@ -292,15 +289,7 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
       // 下落时加重，手感更干脆
       body.setGravityY(body.velocity.y > 0 ? TUNING.gravity * (TUNING.fallMultiplier - 1) : 0);
 
-      // 松开跳跃键截断上升，实现短跳
-      const jumpHeld = anyDown(this.keys.jump) || this.virtual.jump;
-      if (this.jumpCutAvailable && !jumpHeld && body.velocity.y < -60) {
-        body.setVelocityY(body.velocity.y * TUNING.jumpCutMultiplier);
-        this.jumpCutAvailable = false;
-      }
-      if (body.velocity.y >= 0) this.jumpCutAvailable = false;
-
-      // 起跳
+      // 起跳：按一下就是固定高度，不再看松手时机
       if (this.jumpBufferTimer > 0 && this.coyoteTimer > 0) {
         this.doJump();
       }

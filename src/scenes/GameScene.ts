@@ -930,12 +930,12 @@ export class GameScene extends Phaser.Scene {
 
   private createTouchControls(): void {
     const pad = (x: number, y: number, r: number, symbol: string): Phaser.GameObjects.Arc => {
-      const c = this.add.circle(x, y, r, 0x08131e, 0.38).setScrollFactor(0).setDepth(150);
-      c.setStrokeStyle(2, 0x9fd4f2, 0.4);
+      const c = this.add.circle(x, y, r, 0x08131e, 0.42).setScrollFactor(0).setDepth(150);
+      c.setStrokeStyle(2, 0x9fd4f2, 0.45);
       this.add
         .text(x, y, symbol, {
           fontFamily: 'monospace',
-          fontSize: r > 30 ? '20px' : '18px',
+          fontSize: r > 40 ? '26px' : '22px',
           color: '#d8ecc0',
         })
         .setOrigin(0.5)
@@ -956,10 +956,11 @@ export class GameScene extends Phaser.Scene {
       target.on('pointerupoutside', () => set(false));
     };
 
-    bind(pad(66, 300, 28, '◀'), 'left');
-    bind(pad(138, 300, 28, '▶'), 'right');
-    bind(pad(568, 278, 32, '跳'), 'jump');
-    bind(pad(486, 302, 26, '冲'), 'dash');
+    // 按钮放大了一圈，方便拇指按
+    bind(pad(70, 294, 36, '◀'), 'left');
+    bind(pad(158, 294, 36, '▶'), 'right');
+    bind(pad(562, 272, 42, '跳'), 'jump');
+    bind(pad(476, 306, 32, '冲'), 'dash');
   }
 
   private finishLevel(cleared: boolean): void {
