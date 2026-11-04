@@ -92,8 +92,12 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.makeButton(cx - 142, 306, 128, 42, '再玩一次', 0x1e4a35, () => {
-      this.scene.stop('Game');
-      this.scene.start('Game');
+      // 游戏场景此刻是 pause 状态，直接 start 可能只是恢复而不是重建，
+      // 导致第二次结算不会重新触发。这里强制 shutdown 再启动。
+      const manager = this.scene.manager;
+      manager.stop('Game');
+      manager.start('Game');
+      manager.stop('Result');
     });
 
     this.makeButton(cx, 306, 128, 42, '保存截图', 0x5a3f1c, () => {

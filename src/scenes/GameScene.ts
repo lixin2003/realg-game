@@ -1064,6 +1064,8 @@ export class GameScene extends Phaser.Scene {
     if (cleared) sfx.win();
     else sfx.lose();
 
+    // 先关掉可能还挂着的结算页，保证每次都是全新实例（否则按钮会因为复用而缺失）
+    this.scene.stop('Result');
     this.scene.launch('Result', {
       coins: this.coinCount,
       total: RAW_COINS.length,
