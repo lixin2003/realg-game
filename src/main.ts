@@ -24,6 +24,10 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
+  input: {
+    // 多点触控：按住方向键的同时还能按跳跃/冲刺
+    activePointers: 3,
+  },
   scene: [GameScene, ResultScene],
 };
 

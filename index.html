@@ -61,6 +61,8 @@
         display: block;
         image-rendering: pixelated;
         image-rendering: crisp-edges;
+        /* 关键：禁掉浏览器手势，否则按住方向键再点跳跃会被当成缩放/滚动 */
+        touch-action: none;
       }
 
       /* ---------------- 启动页 ---------------- */
@@ -72,12 +74,13 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: radial-gradient(circle at 50% 18%, #16324a 0%, #0a1420 42%, #04080e 100%);
+        background: radial-gradient(circle at 50% 16%, #16324a 0%, #0a1420 44%, #04080e 100%);
         color: #e6f0f7;
         font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
         transition: opacity 0.35s ease;
-        padding: 24px;
+        padding: 16px;
         touch-action: manipulation;
+        overflow: hidden;
       }
 
       #start-screen.hidden {
@@ -90,53 +93,86 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
-        max-width: 520px;
         width: 100%;
+        max-width: 460px;
+        transform-origin: center center;
+      }
+
+      /* 小屏 / 横屏时整体再缩一档，保证 logo 和按钮都在屏幕内 */
+      @media (max-height: 460px) {
+        .start-inner {
+          transform: scale(0.82);
+        }
+      }
+      @media (max-height: 360px) {
+        .start-inner {
+          transform: scale(0.7);
+        }
+      }
+
+      /* 摇摆的小幽灵兔子 */
+      .ghost {
+        height: clamp(72px, 19vh, 104px);
+        width: auto;
+        transform-origin: 50% 92%;
+        animation: sway 2.6s ease-in-out infinite;
+        filter: drop-shadow(0 6px 18px rgba(255, 236, 186, 0.22));
+      }
+
+      @keyframes sway {
+        0%,
+        100% {
+          transform: rotate(-9deg) translateY(2px);
+        }
+        50% {
+          transform: rotate(9deg) translateY(-6px);
+        }
       }
 
       .start-logo {
-        width: min(196px, 48vw);
+        width: clamp(96px, 24vw, 128px);
         height: auto;
+        margin-top: 6px;
         filter: drop-shadow(0 4px 14px rgba(240, 185, 85, 0.25));
       }
 
       .start-title {
-        margin: 18px 0 0;
-        font-size: clamp(26px, 7vw, 34px);
+        margin: 8px 0 0;
+        font-size: clamp(20px, 5.4vw, 26px);
         font-weight: 800;
         letter-spacing: 2px;
         color: #f4f8fc;
       }
 
       .start-sub {
-        margin: 10px 0 0;
-        font-size: clamp(14px, 3.4vw, 16px);
+        margin: 6px 0 0;
+        font-size: clamp(12px, 3vw, 14px);
         font-weight: 600;
         color: #f0b955;
         letter-spacing: 0.5px;
       }
 
       .start-desc {
-        margin: 14px 0 0;
-        font-size: clamp(12px, 3vw, 14px);
-        color: #9fb4c6;
+        margin: 8px 0 0;
+        font-size: clamp(10px, 2.6vw, 12px);
+        color: #93a9bb;
         letter-spacing: 0.5px;
       }
 
       #start-btn {
-        margin-top: 30px;
-        width: min(260px, 72vw);
-        height: 54px;
+        margin-top: 16px;
+        width: min(210px, 62vw);
+        height: 46px;
         border: 0;
         border-radius: 999px;
         background: linear-gradient(180deg, #f5c66a, #e0a03a);
         color: #201403;
-        font-size: 17px;
+        font-size: 15px;
         font-weight: 800;
         letter-spacing: 3px;
         font-family: inherit;
         cursor: pointer;
-        box-shadow: 0 6px 22px rgba(224, 160, 58, 0.32);
+        box-shadow: 0 5px 18px rgba(224, 160, 58, 0.3);
         transition:
           transform 0.12s ease,
           opacity 0.2s ease;
@@ -147,20 +183,25 @@
       }
 
       #start-btn:disabled {
-        opacity: 0.65;
+        opacity: 0.72;
         cursor: default;
         box-shadow: none;
       }
 
+      .start-wait {
+        margin: 10px 0 0;
+        font-size: clamp(10px, 2.5vw, 11px);
+        color: #6f8598;
+      }
+
       .start-meta {
-        margin-top: 26px;
-        font-size: clamp(11px, 2.8vw, 12px);
+        margin: 12px 0 0;
+        font-size: clamp(10px, 2.5vw, 11px);
         color: #7d94a8;
         line-height: 1.7;
       }
 
       .start-domain {
-        font-size: clamp(11px, 2.8vw, 12px);
         color: #5f7488;
         letter-spacing: 1px;
       }
@@ -168,14 +209,14 @@
       /* 加载中的小转圈 */
       .spinner {
         display: none;
-        width: 16px;
-        height: 16px;
+        width: 14px;
+        height: 14px;
         margin-right: 8px;
         border: 2px solid rgba(32, 20, 3, 0.3);
         border-top-color: #201403;
         border-radius: 50%;
         animation: spin 0.75s linear infinite;
-        vertical-align: -3px;
+        vertical-align: -2px;
       }
 
       #start-screen.loading .spinner {
@@ -232,6 +273,7 @@
     <!-- 启动页：纯 HTML，首屏立刻可见，不用等 JS 下载完 -->
     <div id="start-screen">
       <div class="start-inner">
+        <img class="ghost" src="assets/ghost.png" alt="" />
         <img class="start-logo" src="assets/logo.png" alt="REALG" />
         <h1 class="start-title">力兔快跑</h1>
         <p class="start-sub">GAI 周延 Real G 成都站</p>
@@ -240,6 +282,8 @@
         <button id="start-btn">
           <span class="spinner"></span><span id="start-label">开始游戏</span>
         </button>
+
+        <p class="start-wait">手机第一次打开时间较长，请耐心等待</p>
 
         <p class="start-meta">
           2027.1.2　成都东安湖体育公园主体育场
