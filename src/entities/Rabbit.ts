@@ -63,6 +63,8 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
   private wasOnGround = true;
   private prevVelocityY = 0;
   private currentState = 'idle';
+  /** 跳跃力倍率，吃到强化道具时临时调高 */
+  private jumpMultiplier = 1;
 
   /** 触摸屏输入，和键盘并行生效 */
   private virtual: VirtualInput = { left: false, right: false, jump: false, dash: false };
@@ -79,6 +81,11 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
     if (next.jump === true && !this.virtual.jump) this.virtualJumpJust = true;
     if (next.dash === true && !this.virtual.dash) this.virtualDashJust = true;
     Object.assign(this.virtual, next);
+  }
+
+  /** 临时改变跳跃力倍率（跳跃高度按倍率的平方走） */
+  setJumpBoost(multiplier: number): void {
+    this.jumpMultiplier = multiplier;
   }
 
   constructor(scene: Phaser.Scene, x: number, y: number, keys: RabbitKeys) {
@@ -151,7 +158,7 @@ export class Rabbit extends Phaser.Physics.Arcade.Sprite {
 
   private doJump(): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
-    body.setVelocityY(TUNING.jumpVelocity);
+    body.setVelocityY(TUNING.jumpVelocity * this.jumpMultiplier);
     this.coyoteTimer = 0;
     this.jumpBufferTimer = 0;
     this.onJump?.();

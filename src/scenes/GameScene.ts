@@ -220,6 +220,11 @@ export class GameScene extends Phaser.Scene {
   private eggRevealed = false;
   private eggCoin?: Phaser.GameObjects.Image;
   private debugEgg = false;
+
+  /** 凤凰金币：回血 + 5 秒跳跃强化 */
+  private specialCoin?: Phaser.GameObjects.Image;
+  private jumpBoostTimer = 0;
+  private boostText?: Phaser.GameObjects.Text;
   private virtualState: VirtualInput = { left: false, right: false, jump: false, dash: false };
 
   constructor() {
@@ -232,6 +237,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image('mushroom-sprite', 'assets/mushroom.png');
     this.load.image('logo-sprite', 'assets/logo.png');
     this.load.image('coin-sprite', 'assets/coin.png');
+    this.load.image('phoenix-coin', 'assets/phoenix-coin.png');
     // 可循环背景：文件不存在时会静默失败，自动退回程序生成的竹林
     this.load.image('bg-loop', 'assets/bg-loop.png');
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, () => undefined);
@@ -253,6 +259,8 @@ export class GameScene extends Phaser.Scene {
     this.pushTimer = 0;
     this.eggRevealed = false;
     this.eggCoin = undefined;
+    this.specialCoin = undefined;
+    this.jumpBoostTimer = 0;
     this.virtualState = { left: false, right: false, jump: false, dash: false };
     // 判断是否显示虚拟按键：pointer: coarse 表示主输入是手指，鼠标是 fine。
     // 只用主指针类型，避免桌面浏览器（包括无头环境）误报触摸能力。
@@ -304,6 +312,7 @@ export class GameScene extends Phaser.Scene {
     this.createEnemies();
     this.createCoins();
     this.createEggCoin();
+    this.createSpecialCoin();
 
     this.cameras.main.startFollow(this.rabbit, true, 0.12, 0.12);
     this.cameras.main.setDeadzone(s(80), s(50));
@@ -595,6 +604,72 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /* ---------------- 凤凰金币：回血 + 跳跃强化 ---------------- */
+
+  private createSpecialCoin(): void {
+    this.specialCoin = this.add
+      .image(s(1450), s(202), 'phoenix-coin')
+      .setDisplaySize(s(54), s(54))
+      .setDepth(9);
+
+    this.tweens.add({
+      targets: this.specialCoin,
+      y: s(202) - s(8),
+      duration: 1500,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+  }
+
+  private updateSpecialCoin(dt: number): void {
+    const coin = this.specialCoin;
+
+    if (coin?.active) {
+      const d = Phaser.Math.Distance.Between(coin.x, coin.y, this.rabbit.x, this.rabbit.y);
+      if (d < s(36)) this.collectSpecialCoin();
+    }
+
+    if (this.jumpBoostTimer <= 0) return;
+
+    this.jumpBoostTimer -= dt;
+    if (this.jumpBoostTimer <= 0) {
+      this.jumpBoostTimer = 0;
+      this.rabbit.setJumpBoost(1);
+      this.boostText?.setVisible(false);
+    } else {
+      this.boostText?.setText(`跳跃强化 ${Math.ceil(this.jumpBoostTimer)}s`).setVisible(true);
+    }
+  }
+
+  private collectSpecialCoin(): void {
+    const coin = this.specialCoin;
+    if (!coin || !coin.active) return;
+    coin.setActive(false);
+
+    if (this.lives < MAX_LIVES) {
+      this.lives += 1;
+      this.refreshHearts();
+    }
+
+    this.jumpBoostTimer = 5;
+    this.rabbit.setJumpBoost(Math.SQRT2);
+    this.boostText?.setText('跳跃强化 5s').setVisible(true);
+
+    sfx.win();
+    this.cameras.main.shake(s(120), 0.004);
+
+    this.tweens.add({
+      targets: coin,
+      y: coin.y - s(22),
+      scale: 1.5,
+      alpha: 0,
+      duration: 320,
+      ease: 'Quad.easeOut',
+      onComplete: () => coin.destroy(),
+    });
+  }
+
   private updateEasterEgg(dt: number): void {
     if (this.finished || this.eggRevealed) {
       this.updateEggCoin();
@@ -785,6 +860,20 @@ export class GameScene extends Phaser.Scene {
 
     this.refreshHearts();
     this.refreshCoins();
+
+    // 跳跃强化倒计时
+    this.boostText = this.add
+      .text(VIRTUAL_W / 2, 40, '', {
+        fontFamily: 'monospace',
+        fontSize: '14px',
+        color: '#ffe9b0',
+        backgroundColor: '#12301f',
+        padding: { x: 9, y: 4 },
+      })
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setVisible(false);
   }
 
   private createDebugOverlay(): void {
@@ -914,6 +1003,7 @@ export class GameScene extends Phaser.Scene {
 
     this.rabbit.update(dt);
     this.updateEasterEgg(dt);
+    this.updateSpecialCoin(dt);
     this.updateMovers(dt);
     this.updateEnemies();
     this.updateCoins();
