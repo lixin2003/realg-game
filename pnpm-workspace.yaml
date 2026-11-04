@@ -1,0 +1,7 @@
+packages:
+  - '.'
+
+# pnpm 10+ 把这几项配置从 .npmrc 搬到了这里
+nodeLinker: hoisted
+onlyBuiltDependencies:
+  - esbuild

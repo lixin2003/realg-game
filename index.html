@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>力兔快跑 | GAI 周延 成都站互动小游戏</title>
+
+    <meta
+      name="description"
+      content="帮兔子跑过竹林、收满力力币、冲到舞台。2027.1.2 成都东安湖体育公园主体育场 · gai781.top"
+    />
+
+    <!-- 社交分享卡片 -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="力兔快跑" />
+    <meta property="og:title" content="力兔快跑 | GAI 周延 成都站" />
+    <meta
+      property="og:description"
+      content="帮兔子跑过竹林、收满力力币、冲到舞台。2027.1.2 成都东安湖体育公园主体育场。"
+    />
+    <meta property="og:image" content="https://gai781.top/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:url" content="https://gai781.top/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="力兔快跑 | GAI 周延 成都站" />
+    <meta
+      name="twitter:description"
+      content="帮兔子跑过竹林、收满力力币、冲到舞台。2027.1.2 成都东安湖体育公园主体育场。"
+    />
+    <meta name="twitter:image" content="https://gai781.top/og-image.png" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: #050a11;
+        overflow: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #game {
+        width: 100vw;
+        height: 100vh;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+      }
+
+      /* 竖屏时提示横屏，点击可继续 */
+      #rotate-hint {
+        position: fixed;
+        inset: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 18px;
+        background: #050a11;
+        color: #cfe6d6;
+        font: 15px/1.7 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        text-align: center;
+        padding: 32px;
+        z-index: 10;
+      }
+      #rotate-hint .icon {
+        font-size: 34px;
+      }
+      #rotate-hint .skip {
+        margin-top: 8px;
+        padding: 8px 20px;
+        border: 1px solid #2b4a3c;
+        border-radius: 999px;
+        color: #7fa48c;
+        font-size: 13px;
+      }
+      @media (orientation: portrait) and (max-width: 900px) {
+        #rotate-hint.show {
+          display: flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+
+    <div id="rotate-hint" class="show">
+      <div class="icon">📱</div>
+      <div>把手机横过来，<br />体验会好很多</div>
+      <div class="skip" id="rotate-skip">仍然继续</div>
+    </div>
+
+    <script>
+      document.getElementById('rotate-skip').addEventListener('click', function () {
+        document.getElementById('rotate-hint').classList.remove('show');
+      });
+    </script>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
