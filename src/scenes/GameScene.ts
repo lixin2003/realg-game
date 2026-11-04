@@ -307,8 +307,6 @@ export class GameScene extends Phaser.Scene {
     this.createSolids();
     this.createMover();
     this.createDecor();
-    this.createSprings();
-    this.createCrumbles();
     this.createStage();
 
     this.keys = this.createKeys();
@@ -325,6 +323,10 @@ export class GameScene extends Phaser.Scene {
     this.movers.forEach((m) => {
       this.physics.add.collider(this.rabbit, m.sprite);
     });
+
+    // 这两个必须在 rabbit 创建之后，否则 collider 会拿到 undefined
+    this.createSprings();
+    this.createCrumbles();
 
     this.createEnemies();
     this.createCoins();
