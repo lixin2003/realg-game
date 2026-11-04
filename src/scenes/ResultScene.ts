@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { sfx } from '../audio/sfx';
 import { VIRTUAL_H, VIRTUAL_W } from '../config';
+import { createResultImage } from '../gfx/resultImage';
 
 export interface ResultData {
   coins: number;
@@ -90,14 +91,77 @@ export class ResultScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.makeButton(cx - 80, 306, 140, 42, '再玩一次', 0x1e4a35, () => {
+    this.makeButton(cx - 142, 306, 128, 42, '再玩一次', 0x1e4a35, () => {
       this.scene.stop('Game');
       this.scene.start('Game');
     });
 
-    this.makeButton(cx + 80, 306, 140, 42, '分享战绩', 0x2b3f6e, () => {
+    this.makeButton(cx, 306, 128, 42, '保存截图', 0x5a3f1c, () => {
+      void this.saveImage(data);
+    });
+
+    this.makeButton(cx + 142, 306, 128, 42, '分享战绩', 0x2b3f6e, () => {
       void this.share(data);
     });
+
+    // 调试用：?shot=1 直接生成图并铺满页面，方便检查排版
+    if (new URLSearchParams(window.location.search).get('shot') === '1') {
+      void this.saveImage(data);
+    }
+  }
+
+  /** 生成一张竖版战绩图，手机上走系统分享，桌面上直接下载 */
+  private async saveImage(data: ResultData): Promise<void> {
+    this.toast('正在生成…');
+
+    const blob = await createResultImage({
+      coins: data.coins,
+      total: data.total,
+      time: data.time,
+      cleared: data.cleared,
+      rank: rank(data.coins, data.total, data.cleared),
+    });
+
+    if (!blob) {
+      this.toast('生成失败，换个浏览器试试');
+      return;
+    }
+
+    // 调试用：把生成的图直接铺在页面上
+    if (new URLSearchParams(window.location.search).get('shot') === '1') {
+      const preview = new Image();
+      preview.src = URL.createObjectURL(blob);
+      preview.style.cssText =
+        'position:fixed;inset:0;width:100%;height:100%;object-fit:contain;background:#000;z-index:9999';
+      document.body.appendChild(preview);
+      return;
+    }
+
+    // 文件名用英文，避免部分系统解压/下载时中文乱码
+    const fileName = `litu-run-${data.coins}of${data.total}.png`;
+    const file = new File([blob], fileName, { type: 'image/png' });
+
+    // 手机优先调系统分享，可以直接存相册 / 发微信
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: '力兔快跑 · 战绩' });
+        return;
+      } catch {
+        // 用户取消分享，继续走下载
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 4000);
+
+    this.toast('已保存，去下载或相册里看看');
   }
 
   private makeButton(
