@@ -31,5 +31,11 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [GameScene, ResultScene],
 };
 
-// eslint-disable-next-line no-new
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+// 首帧时 #game 的尺寸可能还没稳定（尤其按需加载时），强制刷新一次缩放
+window.setTimeout(() => game.scale.refresh(), 120);
+window.addEventListener('resize', () => game.scale.refresh());
+window.addEventListener('orientationchange', () => {
+  window.setTimeout(() => game.scale.refresh(), 150);
+});

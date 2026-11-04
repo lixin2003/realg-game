@@ -225,6 +225,19 @@ export class GameScene extends Phaser.Scene {
   private specialCoin?: Phaser.GameObjects.Image;
   private jumpBoostTimer = 0;
   private boostText?: Phaser.GameObjects.Text;
+
+  /** 弹跳音箱：踩上去把人弹到高处 */
+  private springs: Array<{ x1: number; x2: number; top: number; cooldown: number }> = [];
+  /** 踩一下就塌的平台 */
+  private crumbles: Array<{
+    sprite: Phaser.GameObjects.TileSprite;
+    x1: number;
+    x2: number;
+    top: number;
+    timer: number;
+    respawn: number;
+    fallen: boolean;
+  }> = [];
   private virtualState: VirtualInput = { left: false, right: false, jump: false, dash: false };
 
   constructor() {
@@ -261,6 +274,8 @@ export class GameScene extends Phaser.Scene {
     this.eggCoin = undefined;
     this.specialCoin = undefined;
     this.jumpBoostTimer = 0;
+    this.springs = [];
+    this.crumbles = [];
     this.virtualState = { left: false, right: false, jump: false, dash: false };
     // 判断是否显示虚拟按键：pointer: coarse 表示主输入是手指，鼠标是 fine。
     // 只用主指针类型，避免桌面浏览器（包括无头环境）误报触摸能力。
@@ -292,6 +307,8 @@ export class GameScene extends Phaser.Scene {
     this.createSolids();
     this.createMover();
     this.createDecor();
+    this.createSprings();
+    this.createCrumbles();
     this.createStage();
 
     this.keys = this.createKeys();
@@ -440,27 +457,6 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < 10; i += 1) {
       g.fillRect(s(1248) + i * s(16), s(179), s(4), s(2));
     }
-
-    this.drawBowl(s(900), s(118), s(88), s(56));
-  }
-
-  /** 程序化画一个白瓷大碗（上宽下窄的阶梯轮廓） */
-  private drawBowl(x: number, y: number, w: number, h: number): void {
-    const g = this.add.graphics().setDepth(7);
-
-    for (let i = 0; i < h; i += 2) {
-      const t = i / h;
-      const inset = Math.pow(t, 1.8) * (w * 0.34);
-      const cw = w - inset * 2;
-      const color = i < s(6) ? PALETTE.porcelain : PALETTE.porcelainShade;
-      g.fillStyle(color, 1);
-      g.fillRect(x + inset, y + i, cw, 2);
-    }
-
-    g.fillStyle(PALETTE.porcelain, 1);
-    g.fillRect(x - 2, y - s(3), w + 4, s(4));
-    g.fillStyle(PALETTE.porcelainShade, 1);
-    g.fillRect(x - 2, y + 1, w + 4, s(2));
   }
 
   /** 终点：演唱会舞台（桁架 + 大屏 + 音箱 + 台前观众） */
@@ -608,13 +604,13 @@ export class GameScene extends Phaser.Scene {
 
   private createSpecialCoin(): void {
     this.specialCoin = this.add
-      .image(s(1450), s(202), 'phoenix-coin')
-      .setDisplaySize(s(54), s(54))
+      .image(s(950), s(180), 'phoenix-coin')
+      .setDisplaySize(s(39), s(39))
       .setDepth(9);
 
     this.tweens.add({
       targets: this.specialCoin,
-      y: s(202) - s(8),
+      y: s(180) - s(8),
       duration: 1500,
       yoyo: true,
       repeat: -1,
@@ -668,6 +664,134 @@ export class GameScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => coin.destroy(),
     });
+  }
+
+  /** 判断玩家是不是踩在某个矩形平台顶面上 */
+  private isOnTop(x1: number, x2: number, top: number): boolean {
+    const rb = this.rabbit.body as Phaser.Physics.Arcade.Body;
+    const overlap = rb.right > x1 + 2 && rb.left < x2 - 2;
+    const gap = rb.bottom - top;
+    return overlap && gap >= -s(4) && gap <= s(8) && rb.velocity.y >= -20;
+  }
+
+  /* ---------------- 弹跳音箱 ---------------- */
+
+  private createSprings(): void {
+    // 放在 B 段开阔地面上，弹起来正好能吃高处那枚币
+    const defs = [{ x: 1000, y: 232 }];
+
+    defs.forEach((d) => {
+      const w = s(44);
+      const h = s(26);
+      const cx = s(d.x);
+      const baseY = s(d.y);
+      const g = this.add.graphics().setDepth(6);
+
+      // 箱体
+      g.fillStyle(0x1f2a38, 1);
+      g.fillRect(cx - w / 2, baseY - h, w, h);
+      g.fillStyle(0x4a5c72, 1);
+      g.fillRect(cx - w / 2, baseY - h, w, 2);
+      // 两个喇叭
+      g.fillStyle(0x0b131c, 1);
+      g.fillCircle(cx - s(7), baseY - h / 2, s(8));
+      g.fillStyle(0x5a708c, 1);
+      g.fillCircle(cx - s(7), baseY - h / 2, s(4));
+      g.fillStyle(0x0b131c, 1);
+      g.fillCircle(cx + s(11), baseY - h / 2 + s(3), s(5));
+
+      this.springs.push({
+        x1: cx - w / 2,
+        x2: cx + w / 2,
+        top: baseY - h,
+        cooldown: 0,
+      });
+    });
+  }
+
+  private updateSprings(dt: number): void {
+    this.springs.forEach((sp) => {
+      sp.cooldown = Math.max(0, sp.cooldown - dt);
+      if (sp.cooldown > 0) return;
+      if (!this.isOnTop(sp.x1, sp.x2, sp.top)) return;
+
+      const rb = this.rabbit.body as Phaser.Physics.Arcade.Body;
+      rb.setVelocityY(-s(780));
+      sp.cooldown = 0.45;
+      sfx.jump();
+      this.cameras.main.shake(s(70), 0.003);
+    });
+  }
+
+  /* ---------------- 一踩就塌的平台 ---------------- */
+
+  private createCrumbles(): void {
+    const defs = [
+      { x: 2035, y: 150, w: 46 },
+      { x: 2395, y: 150, w: 46 },
+    ];
+
+    defs.forEach((d) => {
+      const ts = this.add
+        .tileSprite(s(d.x) + s(d.w) / 2, s(d.y) + s(8), s(d.w), s(16), 'tile-metal')
+        .setDepth(5)
+        .setTint(0xffb076);
+
+      this.physics.add.existing(ts, true);
+      this.physics.add.collider(this.rabbit, ts);
+
+      this.crumbles.push({
+        sprite: ts,
+        x1: s(d.x),
+        x2: s(d.x + d.w),
+        top: s(d.y),
+        timer: 0,
+        respawn: 0,
+        fallen: false,
+      });
+    });
+  }
+
+  private updateCrumbles(dt: number): void {
+    this.crumbles.forEach((c) => {
+      if (c.fallen) {
+        c.respawn -= dt;
+        if (c.respawn <= 0) {
+          c.fallen = false;
+          c.timer = 0;
+          c.sprite.setAlpha(1);
+          (c.sprite.body as Phaser.Physics.Arcade.StaticBody).enable = true;
+        }
+        return;
+      }
+
+      if (this.isOnTop(c.x1, c.x2, c.top) && c.timer === 0) {
+        c.timer = 0.7;
+      }
+
+      if (c.timer <= 0) return;
+
+      c.timer -= dt;
+      // 抖动提示
+      c.sprite.setAlpha(0.55 + Math.sin(this.time.now * 0.06) * 0.35);
+
+      if (c.timer <= 0) {
+        c.fallen = true;
+        c.respawn = 2.6;
+        c.sprite.setAlpha(0.12);
+        (c.sprite.body as Phaser.Physics.Arcade.StaticBody).enable = false;
+      }
+    });
+  }
+
+  /* ---------------- 传送带 ---------------- */
+
+  private updateConveyor(dt: number): void {
+    const top = s(176);
+    if (!this.isOnTop(s(1240), s(1400), top)) return;
+
+    // 直接改位置，避免和输入速度互相打架
+    this.rabbit.x -= s(95) * dt;
   }
 
   private updateEasterEgg(dt: number): void {
@@ -1004,6 +1128,9 @@ export class GameScene extends Phaser.Scene {
     this.rabbit.update(dt);
     this.updateEasterEgg(dt);
     this.updateSpecialCoin(dt);
+    this.updateSprings(dt);
+    this.updateCrumbles(dt);
+    this.updateConveyor(dt);
     this.updateMovers(dt);
     this.updateEnemies();
     this.updateCoins();

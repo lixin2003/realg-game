@@ -23,6 +23,12 @@ function setFailed(message: string): void {
 
 async function start(): Promise<void> {
   setLoading();
+
+  // 等两帧，确保 #game 已经完成布局，否则 Phaser 会按错误尺寸创建画布
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+
   try {
     // 动态导入：游戏代码和资源到这一刻才真正下载
     await import('./main');
