@@ -32,7 +32,13 @@
       content="帮兔子跑过竹林、收满力力币、冲到舞台。2027.1.2 成都东安湖体育公园主体育场。"
     />
     <meta name="twitter:image" content="https://gai781.top/og-image.png" />
+
     <style>
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
       html,
       body {
         margin: 0;
@@ -40,19 +46,150 @@
         height: 100%;
         background: #050a11;
         overflow: hidden;
-        -webkit-tap-highlight-color: transparent;
+        -webkit-text-size-adjust: 100%;
       }
+
+      /* 固定定位铺满可视区，避开 iOS 地址栏把 100vh 算多了的问题 */
       #game {
-        width: 100vw;
-        height: 100vh;
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
       }
+
       canvas {
         display: block;
         image-rendering: pixelated;
         image-rendering: crisp-edges;
       }
 
-      /* 竖屏时提示横屏，点击可继续 */
+      /* ---------------- 启动页 ---------------- */
+
+      #start-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 30;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at 50% 18%, #16324a 0%, #0a1420 42%, #04080e 100%);
+        color: #e6f0f7;
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        transition: opacity 0.35s ease;
+        padding: 24px;
+        touch-action: manipulation;
+      }
+
+      #start-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      .start-inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        max-width: 520px;
+        width: 100%;
+      }
+
+      .start-logo {
+        width: min(196px, 48vw);
+        height: auto;
+        filter: drop-shadow(0 4px 14px rgba(240, 185, 85, 0.25));
+      }
+
+      .start-title {
+        margin: 18px 0 0;
+        font-size: clamp(26px, 7vw, 34px);
+        font-weight: 800;
+        letter-spacing: 2px;
+        color: #f4f8fc;
+      }
+
+      .start-sub {
+        margin: 10px 0 0;
+        font-size: clamp(14px, 3.4vw, 16px);
+        font-weight: 600;
+        color: #f0b955;
+        letter-spacing: 0.5px;
+      }
+
+      .start-desc {
+        margin: 14px 0 0;
+        font-size: clamp(12px, 3vw, 14px);
+        color: #9fb4c6;
+        letter-spacing: 0.5px;
+      }
+
+      #start-btn {
+        margin-top: 30px;
+        width: min(260px, 72vw);
+        height: 54px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #f5c66a, #e0a03a);
+        color: #201403;
+        font-size: 17px;
+        font-weight: 800;
+        letter-spacing: 3px;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: 0 6px 22px rgba(224, 160, 58, 0.32);
+        transition:
+          transform 0.12s ease,
+          opacity 0.2s ease;
+      }
+
+      #start-btn:active {
+        transform: scale(0.97);
+      }
+
+      #start-btn:disabled {
+        opacity: 0.65;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      .start-meta {
+        margin-top: 26px;
+        font-size: clamp(11px, 2.8vw, 12px);
+        color: #7d94a8;
+        line-height: 1.7;
+      }
+
+      .start-domain {
+        font-size: clamp(11px, 2.8vw, 12px);
+        color: #5f7488;
+        letter-spacing: 1px;
+      }
+
+      /* 加载中的小转圈 */
+      .spinner {
+        display: none;
+        width: 16px;
+        height: 16px;
+        margin-right: 8px;
+        border: 2px solid rgba(32, 20, 3, 0.3);
+        border-top-color: #201403;
+        border-radius: 50%;
+        animation: spin 0.75s linear infinite;
+        vertical-align: -3px;
+      }
+
+      #start-screen.loading .spinner {
+        display: inline-block;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* ---------------- 竖屏提示 ---------------- */
+
       #rotate-hint {
         position: fixed;
         inset: 0;
@@ -66,11 +203,13 @@
         font: 15px/1.7 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
         text-align: center;
         padding: 32px;
-        z-index: 10;
+        z-index: 20;
       }
+
       #rotate-hint .icon {
         font-size: 34px;
       }
+
       #rotate-hint .skip {
         margin-top: 8px;
         padding: 8px 20px;
@@ -79,6 +218,7 @@
         color: #7fa48c;
         font-size: 13px;
       }
+
       @media (orientation: portrait) and (max-width: 900px) {
         #rotate-hint.show {
           display: flex;
@@ -89,7 +229,28 @@
   <body>
     <div id="game"></div>
 
-    <div id="rotate-hint" class="show">
+    <!-- 启动页：纯 HTML，首屏立刻可见，不用等 JS 下载完 -->
+    <div id="start-screen">
+      <div class="start-inner">
+        <img class="start-logo" src="assets/logo.png" alt="REALG" />
+        <h1 class="start-title">力兔快跑</h1>
+        <p class="start-sub">GAI 周延 Real G 成都站</p>
+        <p class="start-desc">跑过竹林 · 收满力力币 · 冲到舞台</p>
+
+        <button id="start-btn">
+          <span class="spinner"></span><span id="start-label">开始游戏</span>
+        </button>
+
+        <p class="start-meta">
+          2027.1.2　成都东安湖体育公园主体育场
+          <br />
+          <span class="start-domain">gai781.top</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- 竖屏提示 -->
+    <div id="rotate-hint">
       <div class="icon">📱</div>
       <div>把手机横过来，<br />体验会好很多</div>
       <div class="skip" id="rotate-skip">仍然继续</div>
@@ -100,6 +261,6 @@
         document.getElementById('rotate-hint').classList.remove('show');
       });
     </script>
-    <script type="module" src="/src/main.ts"></script>
+    <script type="module" src="/src/boot.ts"></script>
   </body>
 </html>

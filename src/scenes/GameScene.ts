@@ -317,6 +317,9 @@ export class GameScene extends Phaser.Scene {
 
     this.input.keyboard?.on('keydown-R', () => this.respawn());
     this.input.keyboard?.on('keydown-F1', () => this.toggleDebug());
+
+    // 首帧就绪，通知启动页淡出
+    window.dispatchEvent(new Event('game-ready'));
   }
 
   /* --------------------------------------------------------------- */
