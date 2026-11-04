@@ -70,8 +70,8 @@ const RAW_SOLIDS: SolidDef[] = [
   { x: 760, y: 232, w: 320, h: 60, kind: 'stone' },
   { x: 1150, y: 232, w: 230, h: 60, kind: 'stone' },
   { x: 1450, y: 232, w: 250, h: 60, kind: 'stone' },
-  { x: 1780, y: 232, w: 240, h: 60, kind: 'stone' },
-  { x: 2100, y: 232, w: 280, h: 60, kind: 'stone' },
+  { x: 1768, y: 232, w: 252, h: 60, kind: 'stone' },
+  { x: 2088, y: 232, w: 292, h: 60, kind: 'stone' },
   { x: 2440, y: 232, w: 460, h: 60, kind: 'stone' },
 
   // ---- A 段台阶 ----
@@ -214,6 +214,9 @@ export class GameScene extends Phaser.Scene {
   private isTouch = false;
   private debugDie = false;
   private keys!: RabbitKeys;
+  private virtualState: VirtualInput = { left: false, right: false, jump: false };
+  /** 虚拟按键对象，用于「设置」里统一缩放 */
+  private touchPads: Array<{ obj: Phaser.GameObjects.Arc; text: Phaser.GameObjects.Text }> = [];
 
   /** 彩蛋：贴着左墙持续按左的累计时间 */
   private pushTimer = 0;
@@ -238,7 +241,6 @@ export class GameScene extends Phaser.Scene {
     respawn: number;
     fallen: boolean;
   }> = [];
-  private virtualState: VirtualInput = { left: false, right: false, jump: false, dash: false };
 
   constructor() {
     super('Game');
@@ -276,7 +278,8 @@ export class GameScene extends Phaser.Scene {
     this.jumpBoostTimer = 0;
     this.springs = [];
     this.crumbles = [];
-    this.virtualState = { left: false, right: false, jump: false, dash: false };
+    this.virtualState = { left: false, right: false, jump: false };
+    this.touchPads = [];
     // 判断是否显示虚拟按键：pointer: coarse 表示主输入是手指，鼠标是 fine。
     // 只用主指针类型，避免桌面浏览器（包括无头环境）误报触摸能力。
     const touchPoints = navigator.maxTouchPoints > 0;
@@ -313,7 +316,6 @@ export class GameScene extends Phaser.Scene {
     this.rabbit = new Rabbit(this, this.spawnX, SPAWN_Y, this.keys);
     this.rabbit.onJump = () => sfx.jump();
     this.rabbit.onLand = () => sfx.land();
-    this.rabbit.onDash = () => sfx.dash();
 
     // 浏览器要求用户先交互一次才允许出声
     this.input.once('pointerdown', () => sfx.unlock());
@@ -895,7 +897,6 @@ export class GameScene extends Phaser.Scene {
         kb.addKey(Phaser.Input.Keyboard.KeyCodes.UP),
         kb.addKey(Phaser.Input.Keyboard.KeyCodes.W),
       ],
-      dash: [kb.addKey(Phaser.Input.Keyboard.KeyCodes.J), kb.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)],
     };
   }
 
@@ -932,6 +933,21 @@ export class GameScene extends Phaser.Scene {
       muteBtn.setAlpha(sfx.isMuted ? 0.28 : 1);
     });
 
+    // 设置（按键大小）
+    const gearBtn = this.add
+      .text(120, 7, '⚙', {
+        fontFamily: 'monospace',
+        fontSize: '15px',
+        color: '#9fd4f2',
+      })
+      .setScrollFactor(0)
+      .setDepth(100)
+      .setInteractive({ useHandCursor: true });
+
+    gearBtn.on('pointerdown', () => {
+      document.getElementById('settings-panel')?.classList.add('show');
+    });
+
     // 生命
     for (let i = 0; i < MAX_LIVES; i += 1) {
       const heart = this.add
@@ -965,7 +981,7 @@ export class GameScene extends Phaser.Scene {
       .text(
         12,
         VIRTUAL_H - 33,
-        this.isTouch ? '左下 移动    右下 跳跃 / 冲刺' : '← → 移动   空格 跳跃   J 冲刺   R 重生',
+        this.isTouch ? '左侧 移动    右侧 跳跃' : '← → 移动   空格 跳跃   R 重生',
         {
           fontFamily: 'monospace',
           fontSize: '12px',
@@ -1147,21 +1163,43 @@ export class GameScene extends Phaser.Scene {
 
   /* ---------------- 触摸屏虚拟按键 ---------------- */
 
+  private readPadScale(): number {
+    const raw = Number(window.localStorage.getItem('litu-pad-scale'));
+    return Number.isFinite(raw) && raw > 0 ? Phaser.Math.Clamp(raw, 0.8, 1.8) : 1;
+  }
+
+  private applyPadScale(scale: number): void {
+    this.touchPads.forEach((p) => {
+      p.obj.setScale(scale);
+      p.text.setScale(scale);
+    });
+  }
+
+  private onPadScaleEvent = (event: Event): void => {
+    const detail = (event as CustomEvent<number>).detail;
+    if (typeof detail === 'number') this.applyPadScale(detail);
+  };
+
   private createTouchControls(): void {
+    const scale = this.readPadScale();
+
     const pad = (x: number, y: number, r: number, symbol: string): Phaser.GameObjects.Arc => {
       const c = this.add.circle(x, y, r, 0x08131e, 0.42).setScrollFactor(0).setDepth(150);
       c.setStrokeStyle(2, 0x9fd4f2, 0.45);
-      this.add
+
+      const label = this.add
         .text(x, y, symbol, {
           fontFamily: 'monospace',
-          fontSize: r > 40 ? '26px' : '22px',
+          fontSize: r > 40 ? '28px' : '24px',
           color: '#d8ecc0',
         })
         .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(151);
-      // 用整体包围盒当点击区，比精确圆形更好按
+
+      // 整体包围盒当点击区，比精确圆形好按
       c.setInteractive({ useHandCursor: true });
+      this.touchPads.push({ obj: c, text: label });
       return c;
     };
 
@@ -1178,22 +1216,24 @@ export class GameScene extends Phaser.Scene {
         this.rabbit.setVirtualInput({ [key]: false } as Partial<VirtualInput>);
       };
 
+      // 只处理这颗按钮自己的事件，不要全局清空
+      // （全局 pointerup 会让「按住右 + 点跳跃」在松跳跃时把右键也一起放掉）
       target.on('pointerdown', press);
       target.on('pointerup', release);
       target.on('pointerout', release);
       target.on('pointerupoutside', release);
     };
 
-    // 按钮放大了一圈，方便拇指按
-    bind(pad(70, 294, 36, '◀'), 'left');
-    bind(pad(158, 294, 36, '▶'), 'right');
-    bind(pad(562, 272, 42, '跳'), 'jump');
-    bind(pad(476, 306, 32, '冲'), 'dash');
+    // 三个键：左移、右移、跳跃。冲刺已移除
+    bind(pad(84, 292, 38, '◀'), 'left');
+    bind(pad(176, 292, 38, '▶'), 'right');
+    bind(pad(556, 270, 46, '跳'), 'jump');
 
-    // 任何地方抬手都清空状态，避免手指滑出按钮后一直按住
-    this.input.on('pointerup', () => {
-      this.virtualState = { left: false, right: false, jump: false, dash: false };
-      this.rabbit.setVirtualInput({ left: false, right: false, jump: false, dash: false });
+    this.applyPadScale(scale);
+
+    window.addEventListener('litu-pad-scale', this.onPadScaleEvent);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('litu-pad-scale', this.onPadScaleEvent);
     });
   }
 
@@ -1297,7 +1337,7 @@ export class GameScene extends Phaser.Scene {
         `vx ${s2.vx.toString().padStart(4)}  vy ${s2.vy.toString().padStart(4)}`,
         `ground ${s2.onGround ? 'Y' : 'n'}  state ${s2.state}`,
         `coyote ${s2.coyote}ms  buffer ${s2.jumpBuffer}ms`,
-        `dash ${s2.dashCooldown}ms  lives ${this.lives}`,
+        `lives ${this.lives}`,
       ].join('\n'),
     );
   }

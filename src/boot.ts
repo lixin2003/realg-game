@@ -52,6 +52,36 @@ async function start(): Promise<void> {
   }
 }
 
+// ---------------- 设置面板 ----------------
+
+const settingsPanel = document.getElementById('settings-panel');
+const padSlider = document.getElementById('pad-size') as HTMLInputElement | null;
+const padValue = document.getElementById('pad-size-value');
+const settingsClose = document.getElementById('settings-close');
+
+const PAD_KEY = 'litu-pad-scale';
+
+const savedScale = Number(window.localStorage.getItem(PAD_KEY));
+const initialScale = Number.isFinite(savedScale) && savedScale > 0 ? savedScale : 1;
+
+if (padSlider) padSlider.value = String(Math.round(initialScale * 100));
+if (padValue) padValue.textContent = `${Math.round(initialScale * 100)}%`;
+
+padSlider?.addEventListener('input', () => {
+  const scale = Number(padSlider.value) / 100;
+  window.localStorage.setItem(PAD_KEY, String(scale));
+  if (padValue) padValue.textContent = `${padSlider.value}%`;
+  window.dispatchEvent(new CustomEvent<number>('litu-pad-scale', { detail: scale }));
+});
+
+settingsClose?.addEventListener('click', () => {
+  settingsPanel?.classList.remove('show');
+});
+
+settingsPanel?.addEventListener('click', (event) => {
+  if (event.target === settingsPanel) settingsPanel.classList.remove('show');
+});
+
 startBtn?.addEventListener('click', () => {
   void start();
 });

@@ -229,6 +229,73 @@
         }
       }
 
+      /* ---------------- 设置面板 ---------------- */
+
+      #settings-panel {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(3, 8, 14, 0.86);
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      }
+
+      #settings-panel.show {
+        display: flex;
+      }
+
+      .settings-card {
+        width: min(330px, 84vw);
+        background: #121c28;
+        border: 1px solid #2b4a3c;
+        border-radius: 16px;
+        padding: 22px 24px 20px;
+        color: #dfe9f2;
+      }
+
+      .settings-card h3 {
+        margin: 0 0 18px;
+        font-size: 17px;
+        font-weight: 700;
+        color: #eaf6ff;
+        text-align: center;
+      }
+
+      .settings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 14px;
+        color: #9fb4c6;
+        margin-bottom: 10px;
+      }
+
+      #pad-size-value {
+        color: #f0b955;
+        font-weight: 700;
+      }
+
+      #pad-size {
+        width: 100%;
+        accent-color: #f0b955;
+        margin: 0 0 22px;
+      }
+
+      #settings-close {
+        width: 100%;
+        height: 44px;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(180deg, #f5c66a, #e0a03a);
+        color: #201403;
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        font-family: inherit;
+      }
+
       /* ---------------- 竖屏提示 ---------------- */
 
       #rotate-hint {
@@ -290,6 +357,19 @@
           <br />
           <span class="start-domain">gai781.top</span>
         </p>
+      </div>
+    </div>
+
+    <!-- 设置面板 -->
+    <div id="settings-panel">
+      <div class="settings-card">
+        <h3>设置</h3>
+        <div class="settings-row">
+          <span>按键大小</span>
+          <span id="pad-size-value">100%</span>
+        </div>
+        <input type="range" id="pad-size" min="80" max="180" step="10" value="100" />
+        <button id="settings-close">完成</button>
       </div>
     </div>
 
